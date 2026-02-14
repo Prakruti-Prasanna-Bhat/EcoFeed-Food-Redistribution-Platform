@@ -16,12 +16,12 @@ export function Signup({ onSwitch }: { onSwitch: () => void }) {
     e.preventDefault();
     setLoading(true);
     try {
-      // Force role to uppercase to match App.tsx logic
+      // Logic Fix: Removed businessType entirely. 
+      // Force Role to Uppercase to match the DB exactly
       await signUpEcoFeed(formData.email, formData.password, {
         role: formData.role.toUpperCase(),
         name: formData.name,
-        address: formData.address,
-        businessType: formData.role.toUpperCase(), 
+        address: formData.address
       });
     } catch (error: any) {
       alert(error.message);
@@ -32,12 +32,12 @@ export function Signup({ onSwitch }: { onSwitch: () => void }) {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-white">
-      <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 border border-gray-100 relative">
+      <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 border border-gray-100">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-green-600 rounded-[1.2rem] flex items-center justify-center mb-4 shadow-xl shadow-green-100">
             <Leaf className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Join EcoFeed</h2>
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center">Join EcoFeed</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -55,25 +55,25 @@ export function Signup({ onSwitch }: { onSwitch: () => void }) {
           </div>
 
           <div className="relative flex items-center group">
-            <Building2 className="absolute left-4 w-5 h-5 text-gray-400" />
+            <Building2 className="absolute left-4 w-5 h-5 text-gray-400 group-focus-within:text-green-600" />
             <input type="text" placeholder="Organization Name" className="w-full pl-12 pr-6 py-4 bg-gray-50 border border-transparent rounded-2xl outline-none focus:ring-2 focus:ring-green-500 font-medium" 
               onChange={(e) => setFormData({...formData, name: e.target.value})} required />
           </div>
           
           <div className="relative flex items-center group">
-            <MapPin className="absolute left-4 w-5 h-5 text-gray-400" />
+            <MapPin className="absolute left-4 w-5 h-5 text-gray-400 group-focus-within:text-green-600" />
             <input type="text" placeholder="Physical Address" className="w-full pl-12 pr-6 py-4 bg-gray-50 border border-transparent rounded-2xl outline-none focus:ring-2 focus:ring-green-500 font-medium" 
               onChange={(e) => setFormData({...formData, address: e.target.value})} required />
           </div>
 
           <div className="relative flex items-center group">
-            <Mail className="absolute left-4 w-5 h-5 text-gray-400" />
+            <Mail className="absolute left-4 w-5 h-5 text-gray-400 group-focus-within:text-green-600" />
             <input type="email" placeholder="Email" className="w-full pl-12 pr-6 py-4 bg-gray-50 border border-transparent rounded-2xl outline-none focus:ring-2 focus:ring-green-500 font-medium" 
               onChange={(e) => setFormData({...formData, email: e.target.value})} required />
           </div>
           
           <div className="relative flex items-center group">
-            <Lock className="absolute left-4 w-5 h-5 text-gray-400" />
+            <Lock className="absolute left-4 w-5 h-5 text-gray-400 group-focus-within:text-green-600" />
             <input type="password" placeholder="Password" className="w-full pl-12 pr-6 py-4 bg-gray-50 border border-transparent rounded-2xl outline-none focus:ring-2 focus:ring-green-500 font-medium" 
               onChange={(e) => setFormData({...formData, password: e.target.value})} required />
           </div>
@@ -82,8 +82,8 @@ export function Signup({ onSwitch }: { onSwitch: () => void }) {
             {loading ? 'Creating Account...' : 'Get Started'}
           </button>
 
-          <div className="mt-6 text-center text-gray-500 font-medium">
-            Already have an account? <button type="button" onClick={onSwitch} className="text-green-600 font-bold hover:underline">Login here</button>
+          <div className="mt-6 text-center">
+            <p className="text-gray-500 font-medium">Already have an account? <button type="button" onClick={onSwitch} className="text-green-600 font-bold hover:underline">Login here</button></p>
           </div>
         </form>
       </div>
