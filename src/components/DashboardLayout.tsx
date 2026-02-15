@@ -1,133 +1,121 @@
-import React, { useState } from 'react';
-import { Search, Bell, LayoutGrid, Users, TrendingUp, Leaf, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Bell, LayoutGrid, Users, TrendingUp, Leaf, LogOut, MapPin, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { logoutEcoFeed } from '../services/auth';
+import { collection, query, getDocs } from 'firebase/firestore'; 
+import { db } from '../firebase'; 
 
-type ViewType = 'donor' | 'receiver' | 'analytics';
+export function DashboardLayout({ children, currentView, onViewChange }: any) {
+  const { profile } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allUsers, setAllUsers] = useState<any[]>([]); 
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-  currentView: ViewType;
-  onViewChange: (view: ViewType) => void;
-}
+  // Fetch all registered users (Donors, Receivers, Composters) for the search feature
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const q = query(collection(db, "users"));
+        const querySnapshot = await getDocs(q);
+        const usersData = querySnapshot.docs.map(doc => ({
+          name: doc.data().name || doc.data().displayName || "Unknown Organization",
+          role: doc.data().role,
+          id: doc.id
+        }));
+        setAllUsers(usersData);
+      } catch (error) {
+        console.error("Search fetch error:", error);
+      }
+    };
+    fetchUsers();
+  }, []);
 
-export function DashboardLayout({ children, currentView, onViewChange }: DashboardLayoutProps) {
-  const [hasNotifications] = useState(true);
+  // Filter users based on the search input
+  const filteredPlaces = allUsers.filter(place => 
+    place.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Left Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        {/* Logo */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center">
+    <div className="flex h-screen bg-[#f8fafc]">
+      {/* Sidebar Navigation */}
+      <aside className="w-64 bg-white border-r border-gray-100 flex flex-col z-20">
+        <div className="p-8 border-b border-gray-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-100">
               <Leaf className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-semibold text-gray-900">EcoFeed</span>
+            <span className="text-xl font-bold text-gray-900 tracking-tight">EcoFeed</span>
           </div>
         </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4">
-          <div className="text-xs font-semibold text-gray-400 mb-4 px-3">MAIN MENU</div>
-          <div className="space-y-1">
-            <button
-              onClick={() => onViewChange('donor')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                currentView === 'donor'
-                  ? 'bg-green-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <LayoutGrid className="w-5 h-5" />
-              <span className="font-medium">Donor Portal</span>
-            </button>
-            <button
-              onClick={() => onViewChange('receiver')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                currentView === 'receiver'
-                  ? 'bg-green-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Users className="w-5 h-5" />
-              <span className="font-medium">Receiver Hub</span>
-            </button>
-            <button
-              onClick={() => onViewChange('analytics')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                currentView === 'analytics'
-                  ? 'bg-green-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <TrendingUp className="w-5 h-5" />
-              <span className="font-medium">Platform Analytics</span>
-            </button>
-          </div>
+        
+        <nav className="flex-1 p-6 space-y-2">
+          {profile?.role === 'DONOR' && (
+            <button onClick={() => onViewChange('donor')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${currentView === 'donor' ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'text-gray-500 hover:bg-gray-50 font-medium'}`}><LayoutGrid className="w-5 h-5" />Donor Portal</button>
+          )}
+          {profile?.role === 'RECEIVER' && (
+            <button onClick={() => onViewChange('receiver')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${currentView === 'receiver' ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'text-gray-500 hover:bg-gray-50 font-medium'}`}><Users className="w-5 h-5" />Receiver Hub</button>
+          )}
+          {profile?.role === 'COMPOSTER' && (
+            <button onClick={() => onViewChange('composter')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${currentView === 'composter' ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'text-gray-500 hover:bg-gray-50 font-medium'}`}><Trash2 className="w-5 h-5" />Composter Hub</button>
+          )}
+          <button onClick={() => onViewChange('analytics')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${currentView === 'analytics' ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'text-gray-500 hover:bg-gray-50 font-medium'}`}><TrendingUp className="w-5 h-5" />My Impact</button>
         </nav>
-
-        {/* Allergen Expert Widget */}
-        <div className="p-4 m-4 bg-green-50 rounded-2xl border border-green-100">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-semibold text-gray-900">Allergen Expert</span>
-          </div>
-          <div className="text-sm text-gray-600 mb-2">
-            Your accuracy streak: <span className="font-semibold text-green-700">12/12</span>
-          </div>
-          <div className="w-full bg-green-200 rounded-full h-2">
-            <div className="bg-green-600 h-2 rounded-full" style={{ width: '100%' }}></div>
-          </div>
-        </div>
       </aside>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
-        <header className="bg-white border-b border-gray-200 px-8 py-4">
-          <div className="flex items-center justify-between">
-            {/* Search */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="bg-white border-b border-gray-100 px-8 py-5">
+          <div className="flex items-center justify-between relative">
             <div className="flex-1 max-w-xl">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-600 transition-colors" />
                 <input
                   type="text"
-                  placeholder="Search listings, NGOs, or history..."
-                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-all"
+                  placeholder="Search shelters, restaurants..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-6 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-green-500 font-medium transition-all"
                 />
               </div>
+
+              {/* Dynamic Search Results Dropdown */}
+              {searchQuery.length > 0 && (
+                <div className="absolute top-full left-0 mt-3 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                  {filteredPlaces.length > 0 ? (
+                    filteredPlaces.map((place, idx) => (
+                      <div key={idx} className="p-4 hover:bg-green-50 flex items-center justify-between border-b border-gray-50 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <MapPin className="w-4 h-4 text-green-600" />
+                          <span className="font-bold text-gray-900 text-sm">{place.name}</span>
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{place.role}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-red-600 bg-red-50 text-[10px] font-bold text-center uppercase tracking-widest">
+                      NO SUCH PLACE FOUND
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Right Section */}
-            <div className="flex items-center gap-4 ml-8">
-              {/* Notifications */}
-              <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
+            <div className="flex items-center gap-6 ml-8">
+              <button className="relative p-2 hover:bg-gray-50 rounded-xl transition-all">
                 <Bell className="w-6 h-6 text-gray-600" />
-                {hasNotifications && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                )}
               </button>
-
-              {/* User Profile */}
-              <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                <div className="text-right">
-                  <div className="font-semibold text-gray-900">Grand Hotel Plaza</div>
-                  <div className="text-sm text-gray-500">Premium Donor</div>
+              <div className="flex items-center gap-4 pl-6 border-l border-gray-100 text-right">
+                <div>
+                  <div className="font-bold text-gray-900 text-sm leading-none mb-1">{profile?.displayName || profile?.name}</div>
+                  <div className="text-[10px] text-green-600 font-black uppercase tracking-widest">{profile?.role}</div>
                 </div>
-                <img
-                  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"
-                  alt="User"
-                  className="w-11 h-11 rounded-full object-cover border-2 border-gray-200"
-                />
+                <button onClick={() => logoutEcoFeed()} className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                  <LogOut className="w-5 h-5" />
+                </button>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="overflow-auto p-8">
           {children}
         </main>
       </div>

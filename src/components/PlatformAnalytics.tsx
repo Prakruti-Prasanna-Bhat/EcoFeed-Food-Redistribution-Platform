@@ -1,262 +1,164 @@
-import React from 'react';
-import { TrendingUp, PieChart as PieChartIcon, Filter, Search } from 'lucide-react';
-import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Area, AreaChart } from 'recharts';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { 
+  Heart, Trash2, Wind, TrendingUp, Calendar, 
+  Package, Leaf, BarChart3, PieChart as PieIcon, ChevronRight
+} from 'lucide-react';
+import { 
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, 
+  CartesianGrid, Tooltip, PieChart, Pie, Cell 
+} from 'recharts';
+import { db } from '../firebase';
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 
 export function PlatformAnalytics() {
-  // Impact trend data
-  const impactData = [
-    { month: 'Jan', value: 450 },
-    { month: 'Feb', value: 520 },
-    { month: 'Mar', value: 580 },
-    { month: 'Apr', value: 550 },
-    { month: 'May', value: 680 },
-    { month: 'Jun', value: 850 },
+  const { profile, user } = useAuth();
+  const [history, setHistory] = useState<any[]>([]);
+  const [categoryStats, setCategoryStats] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      const q = query(
+        collection(db, "transactions"),
+        where("donorId", "==", user.uid),
+        orderBy("timestamp", "desc"),
+        limit(15)
+      );
+
+      return onSnapshot(q, (snapshot) => {
+        const txs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setHistory(txs);
+
+        const categoryMap: Record<string, number> = {};
+        txs.forEach((t: any) => {
+          categoryMap[t.category] = (categoryMap[t.category] || 0) + (t.amountClaimed || 0);
+        });
+        
+        setCategoryStats(Object.keys(categoryMap).map(name => ({
+          name, value: categoryMap[name]
+        })));
+      });
+    }
+  }, [user]);
+
+  const wasteReduced = profile?.wasteReduced || 0;
+  const co2SavedKg = wasteReduced * 2.5; 
+  
+  // BOXED METRICS: Preserved from Donor Portal
+  const metrics = [
+    { label: 'TOTAL MEALS', value: (profile?.totalMeals || 0).toString(), icon: Heart, color: 'text-pink-500', bg: 'bg-pink-50' },
+    { label: 'WASTE DIVERTED', value: `${wasteReduced.toFixed(1)}kg`, icon: Trash2, color: 'text-green-500', bg: 'bg-green-50' },
+    { label: 'CO₂ PREVENTED', value: co2SavedKg > 1000 ? `${(co2SavedKg/1000).toFixed(2)}t` : `${co2SavedKg.toFixed(1)}kg`, icon: Wind, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'COMMUNITY REACH', value: profile?.receiverDonationCount || '0', icon: Leaf, color: 'text-orange-500', bg: 'bg-orange-50' },
   ];
 
-  // Food waste distribution data
-  const wasteData = [
-    { name: 'Bakery', value: 35, color: '#16a34a' },
-    { name: 'Cooked', value: 28, color: '#3b82f6' },
-    { name: 'Veg', value: 22, color: '#f59e0b' },
-    { name: 'Meat', value: 15, color: '#ef4444' },
-  ];
-
-  // Global impact registry data
-  const registryData = [
-    {
-      id: 1,
-      listing: 'Baguette Surplus (20kg)',
-      source: 'Artisan Bakas',
-      receiver: 'Local Food Bank',
-      status: 'Completed',
-      co2: '+12.4kg',
-    },
-    {
-      id: 2,
-      listing: 'Baguette Surplus (20kg)',
-      source: 'Artisan Bakas',
-      receiver: 'Local Food Bank',
-      status: 'Completed',
-      co2: '+12.4kg',
-    },
-    {
-      id: 3,
-      listing: 'Baguette Surplus (20kg)',
-      source: 'Artisan Bakas',
-      receiver: 'Local Food Bank',
-      status: 'Completed',
-      co2: '+12.4kg',
-    },
-    {
-      id: 4,
-      listing: 'Baguette Surplus (20kg)',
-      source: 'Artisan Bakas',
-      receiver: 'Local Food Bank',
-      status: 'Completed',
-      co2: '+12.4kg',
-    },
-    {
-      id: 5,
-      listing: 'Baguette Surplus (20kg)',
-      source: 'Artisan Bakas',
-      receiver: 'Local Food Bank',
-      status: 'Completed',
-      co2: '+12.4kg',
-    },
-  ];
+  const COLORS = ['#00C897', '#3B82F6', '#F59E0B', '#EF4444'];
 
   return (
-    <div className="p-8">
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Community Impact Trend */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
-        >
-          <div className="flex items-center gap-2 mb-6">
-            <TrendingUp className="w-5 h-5 text-green-600" />
-            <h3 className="font-bold text-gray-900">Community Impact Trend</h3>
-          </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={impactData}>
-              <defs>
-                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#16a34a" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="#16a34a" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="month" 
-                stroke="#9ca3af"
-                style={{ fontSize: '12px' }}
-              />
-              <YAxis 
-                stroke="#9ca3af"
-                style={{ fontSize: '12px' }}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'white', 
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  fontSize: '12px'
-                }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#16a34a" 
-                strokeWidth={3}
-                fill="url(#colorValue)" 
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </motion.div>
+    <div className="p-8 space-y-12 max-w-[1440px] mx-auto min-h-screen">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-black text-gray-900 tracking-tight">Environmental Impact</h1>
+        <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Real-Time Data Transparency for {profile?.displayName || 'Bakery'}</p>
+      </div>
 
-        {/* Food Waste Distribution */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
-        >
-          <div className="flex items-center gap-2 mb-6">
-            <PieChartIcon className="w-5 h-5 text-blue-600" />
-            <h3 className="font-bold text-gray-900">Food Waste Distribution</h3>
+      {/* 📊 ROW 1: BOXED STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {metrics.map((m, i) => (
+          <div key={i} className="bg-white rounded-[1.5rem] p-8 border border-gray-100 shadow-sm flex items-center justify-between hover:translate-y-[-4px] transition-all">
+            <div className="space-y-2">
+              <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest leading-none">{m.label}</p>
+              <p className="text-4xl font-black text-gray-900 leading-none">{m.value}</p>
+            </div>
+            <div className={`${m.bg} p-4 rounded-2xl`}><m.icon className={`w-8 h-8 ${m.color}`} /></div>
           </div>
-          <div className="flex items-center justify-between">
-            <ResponsiveContainer width="60%" height={280}>
+        ))}
+      </div>
+
+      {/* 📉 ROW 2: VISUAL CHARTS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* IMPACT TRAJECTORY (Smooth Area Chart) */}
+        <div className="lg:col-span-2 bg-white rounded-[3rem] p-10 border border-gray-50 shadow-sm space-y-10">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-black text-gray-900 flex items-center gap-3"><TrendingUp className="text-[#00C897]" /> Impact Trajectory</h3>
+            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Growth Trend</span>
+          </div>
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={history.slice().reverse()}>
+                <defs>
+                  <linearGradient id="colorImpact" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00C897" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#00C897" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="timestamp" hide />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', padding: '20px' }}
+                />
+                <Area type="monotone" dataKey="amountClaimed" stroke="#00C897" strokeWidth={5} fillOpacity={1} fill="url(#colorImpact)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* CATEGORY SPLIT (Professional Pie Chart) */}
+        <div className="bg-white rounded-[3rem] p-10 border border-gray-50 shadow-sm flex flex-col items-center">
+          <h3 className="text-xl font-black text-gray-900 w-full mb-8 flex items-center gap-3">
+            <PieIcon className="text-blue-500" /> Category Split
+          </h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={wasteData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {wasteData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                <Pie data={categoryStats} innerRadius={70} outerRadius={95} paddingAngle={10} dataKey="value">
+                  {categoryStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />
                   ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-            <div className="space-y-3">
-              {wasteData.map((item) => (
-                <div key={item.name} className="flex items-center gap-3">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: item.color }}
-                  ></div>
-                  <span className="text-sm font-medium text-gray-700">{item.name}</span>
-                </div>
-              ))}
-            </div>
           </div>
-        </motion.div>
+          <div className="grid grid-cols-2 gap-3 w-full mt-10">
+            {categoryStats.map((c, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
+                <span className="text-[10px] font-black text-gray-600 uppercase tracking-tighter truncate">{c.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Global Impact Registry */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-      >
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-gray-900">Global Impact Registry</h3>
-            <div className="flex gap-2">
-              <button className="p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                <Filter className="w-5 h-5 text-gray-600" />
-              </button>
-              <button className="p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                <Search className="w-5 h-5 text-gray-600" />
-              </button>
+      {/* 📜 ROW 3: VERIFIED HISTORY */}
+      <div className="bg-white rounded-[3rem] p-12 border border-gray-100 shadow-sm space-y-8">
+        <h3 className="text-xl font-black text-gray-900 flex items-center gap-3"><Calendar className="text-green-600" /> Verified Impact History</h3>
+        <div className="grid gap-4">
+          {history.length === 0 ? (
+            <div className="py-20 text-center bg-gray-50 rounded-[2.5rem] border-2 border-dashed border-gray-100">
+                <Package className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+                <p className="text-gray-400 font-bold italic">No donations verified yet.</p>
             </div>
-          </div>
+          ) : (
+            history.map((t, i) => (
+              <div key={i} className="flex items-center justify-between p-7 bg-white border border-gray-100 rounded-[2rem] hover:shadow-lg transition-all group">
+                <div className="flex items-center gap-6">
+                  <div className="bg-green-50 p-5 rounded-2xl group-hover:bg-green-100 transition-colors"><Package className="text-green-600 w-6 h-6" /></div>
+                  <div>
+                    <p className="font-black text-gray-900 text-lg leading-tight">Shared with {t.claimerName}</p>
+                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-1">{t.category} • {new Date(t.timestamp?.seconds * 1000).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <div className="text-right space-y-1">
+                  <p className="font-black text-green-600 text-2xl">+{t.amountClaimed}</p>
+                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Portions Saved</p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Listing
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Source
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Receiver
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  CO₂ Impact
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {registryData.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {row.listing}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {row.source}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {row.receiver}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium">
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-semibold text-green-600">
-                      {row.co2}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Showing <span className="font-medium">1-5</span> of <span className="font-medium">237</span> entries
-          </div>
-          <div className="flex gap-2">
-            <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50" disabled>
-              Previous
-            </button>
-            <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors">
-              1
-            </button>
-            <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-              2
-            </button>
-            <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-              3
-            </button>
-            <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-              Next
-            </button>
-          </div>
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
